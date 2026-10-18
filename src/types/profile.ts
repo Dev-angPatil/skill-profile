@@ -9,12 +9,14 @@ export interface SkillEvent {
   meta: string;
   link?: string;
   thumbnailUrl?: string; // certificate image preview
+  delta?: number;
 }
 
 export interface SkillItem {
   id: string;
   name: string;
   score: number;
+  category?: string;
   events: SkillEvent[];
 }
 

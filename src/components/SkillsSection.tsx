@@ -11,11 +11,20 @@ interface SkillsSectionProps {
 }
 
 export const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, highlightSkills = [] }) => {
-  const [pinnedSkillId, setPinnedSkillId] = useState<string | null>(null);
-  const [hoveredSkillId, setHoveredSkillId] = useState<string | null>(null);
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
 
-  const activeSkillId = pinnedSkillId || hoveredSkillId;
-  const activeSkill = skills.find((s) => s.id === activeSkillId) || null;
+  const selectedSkill = skills.find((s) => s.id === selectedSkillId) || null;
+
+  // Close floating window on Escape key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedSkillId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const getProofIcons = (skill: SkillItem) => {
     const types = new Set(skill.events.map((e) => e.type));
@@ -32,53 +41,50 @@ export const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, highlightS
     <section className="w-full relative mt-8 space-y-4">
       {/* Section Header */}
       <div className="flex items-center justify-between pb-3 border-b border-[var(--border-glass)]">
-        <h2 className="text-lg font-bold tracking-tight text-[var(--foreground)]">
-          Skills &amp; Verified Proofs
-        </h2>
-        <span className="text-xs text-[var(--foreground-muted)] font-mono">
-          {pinnedSkillId ? 'Card pinned (click to unlock)' : 'Hover or click any skill to inspect proofs'}
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-[var(--foreground)]">
+            Skills &amp; Verified Proofs
+          </h2>
+          <p className="text-xs text-[var(--foreground-muted)]">
+            Press any skill to launch the floating provenance window with linked repositories and milestones
+          </p>
+        </div>
+        <span className="hidden sm:inline-block text-xs text-[var(--foreground-muted)] font-mono bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-full">
+          Click skill to inspect
         </span>
       </div>
 
-      {/* Skills Grid - Stays fixed in place without layout jitter */}
+      {/* Skills Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3.5">
         {skills.map((skill) => {
-          const isActive = activeSkillId === skill.id;
+          const isSelected = selectedSkillId === skill.id;
           const isHighlighted = highlightSkills.includes(skill.id);
 
           return (
             <div
               key={skill.id}
-              onMouseEnter={() => {
-                if (!pinnedSkillId) setHoveredSkillId(skill.id);
-              }}
-              onMouseLeave={() => {
-                if (!pinnedSkillId) setHoveredSkillId(null);
-              }}
-              onClick={() => {
-                setPinnedSkillId(pinnedSkillId === skill.id ? null : skill.id);
-              }}
+              onClick={() => setSelectedSkillId(skill.id)}
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  setPinnedSkillId(pinnedSkillId === skill.id ? null : skill.id);
+                  setSelectedSkillId(skill.id);
                 }
               }}
-              className={`relative cursor-pointer select-none rounded-2xl p-4 transition-all duration-200 outline-none glass-card glass-card-hover ${
-                isActive
+              className={`relative cursor-pointer select-none rounded-2xl p-4 transition-all duration-200 outline-none glass-card glass-card-hover group ${
+                isSelected
                   ? 'ring-2 ring-zinc-950 dark:ring-white bg-white dark:bg-zinc-800 shadow-xl scale-[1.02]'
-                  : 'bg-white/80 dark:bg-zinc-900/80 hover:bg-white dark:hover:bg-zinc-800'
+                  : 'bg-white/80 dark:bg-zinc-900/80 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-md'
               } ${isHighlighted ? 'animate-pulse ring-2 ring-emerald-500' : ''}`}
             >
               {/* Skill Name + Score */}
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-semibold text-sm tracking-tight text-[var(--foreground)]">
+                <h3 className="font-semibold text-sm tracking-tight text-[var(--foreground)] group-hover:text-zinc-950 dark:group-hover:text-white transition-colors">
                   {skill.name}
                 </h3>
                 <span
                   className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full transition-colors ${
-                    isActive
+                    isSelected
                       ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-[var(--foreground)]'
                   }`}
@@ -91,19 +97,19 @@ export const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, highlightS
               <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-3 overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    isActive ? 'bg-zinc-900 dark:bg-white' : 'bg-zinc-400 dark:bg-zinc-600'
+                    isSelected ? 'bg-zinc-900 dark:bg-white' : 'bg-zinc-400 dark:bg-zinc-600'
                   }`}
                   style={{ width: `${skill.score}%` }}
                 />
               </div>
 
               {/* Proof type icons footer */}
-              <div className="flex items-center justify-between mt-2.5 text-[var(--foreground-muted)]">
+              <div className="flex items-center justify-between mt-3 text-[var(--foreground-muted)]">
                 <div className="flex items-center gap-1.5">
                   {getProofIcons(skill)}
                 </div>
-                <span className="text-[10px] font-mono">
-                  {isActive ? (pinnedSkillId === skill.id ? 'Pinned' : 'Viewing') : `${skill.events.length} proofs`}
+                <span className="text-[10px] font-mono group-hover:text-[var(--foreground)] transition-colors">
+                  {skill.events.length} proofs ↗
                 </span>
               </div>
             </div>
@@ -111,24 +117,24 @@ export const SkillsSection: React.FC<SkillsSectionProps> = ({ skills, highlightS
         })}
       </div>
 
-      {/* Connected Evidence Overlay Panel Rendered Below Grid (No layout jump for grid cards) */}
-      {activeSkill && (
+      {/* Floating Window Overlay on Top */}
+      {selectedSkill && (
         <div 
-          className="w-full relative z-30 pt-2 transition-all duration-300 animate-in fade-in slide-in-from-top-3"
-          onMouseEnter={() => {
-            if (!pinnedSkillId) setHoveredSkillId(activeSkill.id);
-          }}
-          onMouseLeave={() => {
-            if (!pinnedSkillId) setHoveredSkillId(null);
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedSkillId(null);
+            }
           }}
         >
-          <SkillScoreOverlay 
-            skill={activeSkill} 
-            onClose={() => {
-              setPinnedSkillId(null);
-              setHoveredSkillId(null);
-            }}
-          />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+            <SkillScoreOverlay 
+              skill={selectedSkill}
+              allSkills={skills}
+              onSelectSkill={(id) => setSelectedSkillId(id)}
+              onClose={() => setSelectedSkillId(null)}
+            />
+          </div>
         </div>
       )}
     </section>

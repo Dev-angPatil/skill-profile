@@ -14,10 +14,17 @@ import {
 
 interface SkillScoreOverlayProps {
   skill: SkillItem;
+  allSkills?: SkillItem[];
+  onSelectSkill?: (skillId: string) => void;
   onClose: () => void;
 }
 
-export const SkillScoreOverlay: React.FC<SkillScoreOverlayProps> = ({ skill, onClose }) => {
+export const SkillScoreOverlay: React.FC<SkillScoreOverlayProps> = ({
+  skill,
+  allSkills = [],
+  onSelectSkill,
+  onClose,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -40,42 +47,44 @@ export const SkillScoreOverlay: React.FC<SkillScoreOverlayProps> = ({ skill, onC
     }
   };
 
+  const calculate = () => {
+    const container = containerRef.current;
+    const badge = badgeRef.current;
+    if (!container || !badge) return;
+
+    const cRect = container.getBoundingClientRect();
+    const bRect = badge.getBoundingClientRect();
+
+    // Start anchor: Bottom-center of the skill score badge
+    const x1 = bRect.left + bRect.width / 2 - cRect.left;
+    const y1 = bRect.bottom - cRect.top;
+
+    const lines: typeof arrows = [];
+    skill.events.forEach((ev) => {
+      const el = cardRefs.current[ev.id];
+      if (el) {
+        const r = el.getBoundingClientRect();
+        // Target anchor: Top-center of each event card
+        lines.push({
+          id: ev.id,
+          x1,
+          y1,
+          x2: r.left + r.width / 2 - cRect.left,
+          y2: r.top - cRect.top,
+        });
+      }
+    });
+    setArrows(lines);
+  };
+
   useEffect(() => {
-    const calculate = () => {
-      const container = containerRef.current;
-      const badge = badgeRef.current;
-      if (!container || !badge) return;
-
-      const cRect = container.getBoundingClientRect();
-      const bRect = badge.getBoundingClientRect();
-
-      // Start anchor: Bottom-center of the skill score badge
-      const x1 = bRect.left + bRect.width / 2 - cRect.left;
-      const y1 = bRect.bottom - cRect.top;
-
-      const lines: typeof arrows = [];
-      skill.events.forEach((ev) => {
-        const el = cardRefs.current[ev.id];
-        if (el) {
-          const r = el.getBoundingClientRect();
-          // Target anchor: Top-center of each event card
-          lines.push({
-            id: ev.id,
-            x1,
-            y1,
-            x2: r.left + r.width / 2 - cRect.left,
-            y2: r.top - cRect.top,
-          });
-        }
-      });
-      setArrows(lines);
-    };
-
     calculate();
-    const t = setTimeout(calculate, 40);
+    const t1 = setTimeout(calculate, 50);
+    const t2 = setTimeout(calculate, 150);
     window.addEventListener('resize', calculate);
     return () => {
-      clearTimeout(t);
+      clearTimeout(t1);
+      clearTimeout(t2);
       window.removeEventListener('resize', calculate);
     };
   }, [skill]);
@@ -83,7 +92,7 @@ export const SkillScoreOverlay: React.FC<SkillScoreOverlayProps> = ({ skill, onC
   return (
     <div
       ref={containerRef}
-      className="relative w-full rounded-3xl glass-card p-6 shadow-2xl border border-white/60 dark:border-white/10 bg-white/95 dark:bg-zinc-900/95 transition-all"
+      className="relative w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/60 dark:border-white/10 bg-white dark:bg-zinc-900 transition-all"
     >
       {/* SVG Canvas for clean bezier connector arrows */}
       <svg
@@ -146,53 +155,90 @@ export const SkillScoreOverlay: React.FC<SkillScoreOverlayProps> = ({ skill, onC
         })}
       </svg>
 
-      {/* Header bar: Skill Name, Score, and Dismiss control */}
-      <div className="relative z-10 flex items-center justify-between pb-4 border-b border-[var(--border-glass)]">
-        <div className="flex items-center gap-3">
-          <div
-            ref={badgeRef}
-            className="px-3.5 py-1.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold font-mono text-base shadow-sm flex items-center gap-1"
-          >
-            <span>{skill.score}</span>
-            <span className="text-[10px] opacity-60">/100</span>
+      {/* Floating Window Top Bar: Skill Info, Mathematical Formula & Close */}
+      <div className="relative z-10 flex flex-col gap-4 pb-5 border-b border-[var(--border-glass)]">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              ref={badgeRef}
+              className="px-3.5 py-1.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold font-mono text-base shadow-sm flex items-center gap-1 shrink-0"
+            >
+              <span>{skill.score}</span>
+              <span className="text-[10px] opacity-60">/100</span>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg tracking-tight text-[var(--foreground)]">
+                  {skill.name}
+                </h3>
+                {skill.category && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[var(--foreground-muted)] uppercase tracking-wider">
+                    {skill.category}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div>
-            <h3 className="font-bold text-base tracking-tight text-[var(--foreground)]">
-              {skill.name}
-            </h3>
-            <p className="text-xs text-[var(--foreground-muted)]">
-              Connected Proofs: Repositories, Certifications &amp; Hackathon Awards
-            </p>
-          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"
+            title="Close floating window (Esc)"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"
-          title="Close details"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {/* Skill Switcher Pills (allows easy live browsing without closing) */}
+        {allSkills.length > 0 && onSelectSkill && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 no-scrollbar">
+            <span className="text-[11px] font-medium text-[var(--foreground-muted)] shrink-0 mr-1">
+              Inspect Skill:
+            </span>
+            {allSkills.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => onSelectSkill(s.id)}
+                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all shrink-0 ${
+                  s.id === skill.id
+                    ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-semibold shadow-sm'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-[var(--foreground-muted)] hover:text-[var(--foreground)] hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                }`}
+              >
+                {s.name} ({s.score})
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Connected Proof Cards Grid */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-8">
+      {/* Connected Proof Cards Grid (3 or 4 events) */}
+      <div className={`relative z-10 grid gap-4 pt-8 ${
+        skill.events.length <= 3 
+          ? 'grid-cols-1 md:grid-cols-3' 
+          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+      }`}>
         {skill.events.map((ev) => (
           <div
             key={ev.id}
             ref={(el) => {
               cardRefs.current[ev.id] = el;
             }}
-            className="glass-card glass-card-hover rounded-2xl p-4 flex flex-col justify-between group bg-white dark:bg-zinc-800/90 shadow-sm border border-[var(--border-glass)]"
+            className="rounded-2xl p-4 flex flex-col justify-between group bg-white dark:bg-zinc-800/90 shadow-md hover:shadow-lg transition-all border border-zinc-200/80 dark:border-zinc-700/80"
           >
             <div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700/60">
-                  {getEventIcon(ev.type)}
+              <div className="flex items-center justify-between gap-2 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700/60">
+                    {getEventIcon(ev.type)}
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--foreground-muted)]">
+                    {ev.label}
+                  </span>
                 </div>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--foreground-muted)]">
-                  {ev.label}
+                <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">
+                  +{ev.delta ?? 15} pts
                 </span>
               </div>
 
@@ -210,12 +256,12 @@ export const SkillScoreOverlay: React.FC<SkillScoreOverlayProps> = ({ skill, onC
               <h4 className="font-semibold text-xs text-[var(--foreground)] leading-snug">
                 {ev.title}
               </h4>
-              <p className="text-[11px] text-[var(--foreground-muted)] mt-1 line-clamp-2 leading-relaxed">
+              <p className="text-[11px] text-[var(--foreground-muted)] mt-1.5 line-clamp-3 leading-relaxed">
                 {ev.description}
               </p>
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-[var(--border-glass)] flex items-center justify-between text-[11px] text-[var(--foreground-muted)]">
+            <div className="mt-3.5 pt-2.5 border-t border-zinc-100 dark:border-zinc-700/60 flex items-center justify-between text-[11px] text-[var(--foreground-muted)]">
               <span className="truncate max-w-[140px] font-mono text-[10px]">
                 {ev.meta}
               </span>
@@ -226,7 +272,7 @@ export const SkillScoreOverlay: React.FC<SkillScoreOverlayProps> = ({ skill, onC
                   rel="noreferrer"
                   className="hover:text-[var(--foreground)] flex items-center gap-1 transition-colors font-medium text-zinc-900 dark:text-zinc-100"
                 >
-                  <span>View</span>
+                  <span>Verify</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               )}
