@@ -30,7 +30,7 @@ export const mockUserProfile: UserProfile = {
           label: 'Certificate',
           description: 'Validated proficiency in Python-based AWS SDK development.',
           meta: 'Amazon Web Services · 2025',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c476?auto=format&fit=crop&q=80&w=400',
+          thumbnailUrl: '/assets/certificate-template.svg',
         },
         {
           id: 'py-hackathon',
@@ -63,7 +63,7 @@ export const mockUserProfile: UserProfile = {
           label: 'Certificate',
           description: 'International software testing qualification.',
           meta: 'ISTQB · 2024',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=400',
+          thumbnailUrl: '/assets/certificate-template.svg',
         },
         {
           id: 'qa-suite',
@@ -129,7 +129,7 @@ export const mockUserProfile: UserProfile = {
           label: 'Certificate',
           description: 'Certified in designing scalable cloud solutions.',
           meta: 'Google Cloud · 2025',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=400',
+          thumbnailUrl: '/assets/certificate-template.svg',
         },
         {
           id: 'cloud-impact',
@@ -202,7 +202,7 @@ export const mockUserProfile: UserProfile = {
           label: 'Certificate',
           description: 'Professional certificate in TensorFlow and deep learning.',
           meta: 'Coursera · 2024',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=400',
+          thumbnailUrl: '/assets/certificate-template.svg',
         },
       ],
     },
